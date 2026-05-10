@@ -179,29 +179,27 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text("⛔ אין לך הרשאה להשתמש בבוט הזה.")
         return
 
-    userbot_status = "✅ מחובר" if (userbot and userbot.is_connected()) else "❌ לא מחובר — השתמש ב-/login"
+    userbot_status = "✅ מחובר" if (userbot and userbot.is_connected()) else "❌ לא מחובר — /login"
+    gpt_line = "• /gpt — GPT-4o (OpenAI)\n" if openai_client else ""
+    gemini_line = "• /gemini — Gemini 2.0 Flash (Google)\n" if gemini_client else ""
     await update.message.reply_text(
         "🤖 *עוזר AI — עזרה מורחבת*\n\n"
-        f"*בוט אישי (Userbot):* {userbot_status}\n\n"
+        f"*בוט אישי:* {userbot_status}\n\n"
         "*מודלים:*\n"
-        "• `/claude` — Claude Opus (Anthropic)\n"
-        "• `/gpt` — GPT-4o (OpenAI)\n\n"
-        "*תזכורות:*\n"
-        "• `/remind 30m קנה חלב` — תזכורת בעוד 30 דקות\n"
-        "• `/remind 2h פגישה` — תזכורת בעוד שעתיים\n"
-        "• `/remind 1d חידוש מנוי` — תזכורת בעוד יום\n"
-        "• `/reminders` — תזכורות פעילות\n\n"
-        "*קבוצות דרך חשבון אישי (מומלץ):*\n"
-        "1\\. קבל API מ-my\\.telegram\\.org/apps\n"
-        "2\\. הגדר TELEGRAM\\_API\\_ID, TELEGRAM\\_API\\_HASH ב-\\.env\n"
-        "3\\. `/login` — אימות חד-פעמי\n"
-        "4\\. `/mygroups` — ראה את כל הקבוצות\n"
-        "5\\. `/send תזונה | ארוחת הצהריים: פסטה`\n\n"
-        "*קבוצות דרך הוספת הבוט (חלופה):*\n"
-        "1\\. הוסף את הבוט לקבוצה\n"
-        "2\\. `/addgroup תזונה` — רשום אותה\n"
-        "3\\. `/send תזונה | הודעה`",
-        parse_mode=constants.ParseMode.MARKDOWN_V2,
+        "• /claude — Claude (Anthropic)\n"
+        f"{gpt_line}"
+        f"{gemini_line}"
+        "\n*תזכורות:*\n"
+        "• /remind 30m קנה חלב\n"
+        "• /remind 2h פגישה\n"
+        "• /remind 1d חידוש מנוי\n"
+        "• /reminders — תזכורות פעילות\n\n"
+        "*קבוצות:*\n"
+        "• /login — חבר חשבון טלגרם אישי\n"
+        "• /mygroups — כל הקבוצות שלך\n"
+        "• /send קבוצה | הודעה\n"
+        "• /addgroup שם — מתוך קבוצה",
+        parse_mode=constants.ParseMode.MARKDOWN,
     )
 
 
