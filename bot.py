@@ -797,6 +797,15 @@ async def on_shutdown(app: Application) -> None:
         logger.info("Userbot disconnected.")
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Unhandled exception for update %s: %s", update, context.error, exc_info=context.error)
+    if isinstance(update, Update) and update.message:
+        try:
+            await update.message.reply_text(f"❌ שגיאה פנימית: {context.error}")
+        except Exception:
+            pass
+
+
 def main() -> None:
     app = (
         Application.builder()
@@ -806,6 +815,7 @@ def main() -> None:
         .build()
     )
 
+    app.add_error_handler(error_handler)
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("clear", clear_command))
