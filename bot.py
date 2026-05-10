@@ -59,7 +59,10 @@ def _check_required_env(var_name: str) -> str:
 TELEGRAM_TOKEN = _check_required_env("TELEGRAM_BOT_TOKEN")
 ANTHROPIC_API_KEY = _check_required_env("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-TELEGRAM_API_ID = int(os.getenv("TELEGRAM_API_ID", "0"))
+try:
+    TELEGRAM_API_ID = int(os.getenv("TELEGRAM_API_ID", "0") or "0")
+except (ValueError, TypeError):
+    TELEGRAM_API_ID = 0
 TELEGRAM_API_HASH = os.getenv("TELEGRAM_API_HASH", "")
 TELEGRAM_PHONE = os.getenv("TELEGRAM_PHONE", "")
 TELEGRAM_2FA_PASSWORD = os.getenv("TELEGRAM_2FA_PASSWORD", "")
