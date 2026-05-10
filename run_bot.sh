@@ -12,21 +12,7 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Load environment
-export $(grep -v '^#' .env | xargs)
-
-# Validate API keys
-if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ "$TELEGRAM_BOT_TOKEN" = "your_telegram_bot_token_here" ]; then
-    echo "❌ TELEGRAM_BOT_TOKEN not set"
-    exit 1
-fi
-
-if [ -z "$ANTHROPIC_API_KEY" ] || [ "$ANTHROPIC_API_KEY" = "your_anthropic_api_key_here" ]; then
-    echo "❌ ANTHROPIC_API_KEY not set"
-    exit 1
-fi
-
-echo "✅ Configuration loaded"
+echo "✅ Configuration file found"
 echo "🔌 Connecting to Telegram..."
 echo ""
 

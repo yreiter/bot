@@ -13,6 +13,9 @@ import asyncio
 # Add repo to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+os.environ.setdefault("TELEGRAM_BOT_TOKEN", "123456789:test_token")
+os.environ.setdefault("ANTHROPIC_API_KEY", "sk-ant-test-key-for-unit-tests")
+
 def test_claude_call():
     """Test Claude API call without real keys"""
     print("Testing Claude API call...")
@@ -21,16 +24,16 @@ def test_claude_call():
     mock_response = Mock()
     mock_response.content = [Mock(type="text", text="Hello from Claude!")]
 
-    with patch('anthropic.Anthropic') as mock_client:
-        mock_instance = Mock()
-        mock_instance.messages.create.return_value = mock_response
-        mock_client.return_value = mock_instance
+    mock_client = Mock()
+    mock_client.messages.create.return_value = mock_response
 
-        # Import and test
+    with patch('bot.claude_client', mock_client):
         from bot import _call_claude
         result = _call_claude([{"role": "user", "content": "Hi"}])
 
         assert result == "Hello from Claude!", f"Expected greeting, got: {result}"
+        mock_client.messages.create.assert_called_once()
+        assert mock_client.messages.create.call_args.kwargs["model"] == "claude-opus-4-1-20250805"
         print("  ✅ Claude call works correctly")
         return True
 
@@ -38,13 +41,12 @@ def test_gpt_call():
     """Test GPT API call without real keys"""
     print("Testing GPT API call...")
 
-    with patch('openai.OpenAI') as mock_client:
-        mock_instance = Mock()
-        mock_response = Mock()
-        mock_response.choices = [Mock(message=Mock(content="Hello from GPT!"))]
-        mock_instance.chat.completions.create.return_value = mock_response
-        mock_client.return_value = mock_instance
+    mock_client = Mock()
+    mock_response = Mock()
+    mock_response.choices = [Mock(message=Mock(content="Hello from GPT!"))]
+    mock_client.chat.completions.create.return_value = mock_response
 
+    with patch('bot.openai_client', mock_client):
         from bot import _call_gpt
         result = _call_gpt([{"role": "user", "content": "Hi"}])
 

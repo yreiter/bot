@@ -2,9 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy requirements and config
+# Copy only application files. Secrets such as .env should be supplied by the
+# runtime environment, not baked into the Docker image.
 COPY requirements.txt .
-COPY .env .
 COPY bot.py .
 
 # Install dependencies

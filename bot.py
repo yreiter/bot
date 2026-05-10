@@ -74,6 +74,7 @@ SYSTEM_PROMPT = os.getenv(
     "Answer clearly and concisely. "
     "When the user writes in Hebrew, respond in Hebrew.",
 )
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-4-1-20250805")
 
 allowed_user_ids: set[int] = set()
 if ALLOWED_USERS.strip():
@@ -695,7 +696,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 def _call_claude(messages: list[dict]) -> str:
     response = claude_client.messages.create(
-        model="claude-opus-4-7",
+        model=CLAUDE_MODEL,
         max_tokens=4096,
         system=SYSTEM_PROMPT,
         messages=messages,
