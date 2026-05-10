@@ -59,6 +59,7 @@ def _check_required_env(var_name: str) -> str:
 TELEGRAM_TOKEN = _check_required_env("TELEGRAM_BOT_TOKEN")
 ANTHROPIC_API_KEY = _check_required_env("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 try:
     TELEGRAM_API_ID = int(os.getenv("TELEGRAM_API_ID", "0") or "0")
 except (ValueError, TypeError):
@@ -96,12 +97,21 @@ if OPENAI_API_KEY:
     except ImportError:
         logger.warning("openai package not installed — GPT support disabled. Run: pip install openai")
 
+gemini_client = None
+if GOOGLE_API_KEY:
+    try:
+        from google import genai as _genai
+        gemini_client = _genai.Client(api_key=GOOGLE_API_KEY)
+        logger.info("Gemini client initialized.")
+    except ImportError:
+        logger.warning("google-genai not installed — Gemini support disabled. Run: pip install google-genai")
+
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
 
 conversation_history: dict[int, list[dict]] = defaultdict(list)
-user_model: dict[int, str] = defaultdict(lambda: "gpt")
+user_model: dict[int, str] = defaultdict(lambda: "gpt" if openai_client else "claude")
 registered_groups: dict[str, int] = {}  # fallback: friendly_name -> bot-visible chat_id
 
 userbot: Optional["TelegramClient"] = None
@@ -135,15 +145,21 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     conversation_history[user_id].clear()
-    gpt_note = " ו-ChatGPT" if openai_client else ""
+    models_note = []
+    if openai_client:
+        models_note.append("ChatGPT")
+    if gemini_client:
+        models_note.append("Gemini")
+    extra = (" ו-" + "/".join(models_note)) if models_note else ""
     await update.message.reply_text(
-        f"👋 *שלום! אני עוזר AI אישי מבוסס Claude{gpt_note}.*\n\n"
+        f"👋 *שלום! אני עוזר AI אישי מבוסס Claude{extra}.*\n\n"
         "שלח לי הודעה ואני אענה לך.\n\n"
         "*פקודות:*\n"
         "• /start — שיחה חדשה\n"
         "• /clear — נקה היסטוריה\n"
         "• /claude — עבור ל-Claude\n"
         "• /gpt — עבור ל-ChatGPT\n"
+        "• /gemini — עבור ל-Gemini\n"
         "• /remind <זמן> <טקסט> — תזכורת (30m / 2h / 1d)\n"
         "• /reminders — תזכורות פעילות\n"
         "• /login — חבר את הבוט לחשבון הטלגרם שלך\n"
@@ -225,6 +241,23 @@ async def gpt_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     conversation_history[user_id].clear()
     await update.message.reply_text(
         "🟢 עברת ל-*ChatGPT* (OpenAI GPT-4o). ההיסטוריה אופסה.",
+        parse_mode=constants.ParseMode.MARKDOWN,
+    )
+
+
+async def gemini_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = get_user_id(update)
+    if user_id is None or not is_authorized(user_id):
+        return
+    if not gemini_client:
+        await update.message.reply_text(
+            "❌ Gemini לא זמין.\nהוסף GOOGLE_API_KEY ל-.env והתקן:\npip install google-generativeai"
+        )
+        return
+    user_model[user_id] = "gemini"
+    conversation_history[user_id].clear()
+    await update.message.reply_text(
+        "🔵 עברת ל-*Gemini* (Google). ההיסטוריה אופסה.",
         parse_mode=constants.ParseMode.MARKDOWN,
     )
 
@@ -675,6 +708,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             response_text = await asyncio.get_event_loop().run_in_executor(
                 None, _call_gpt, list(history)
             )
+        elif model == "gemini" and gemini_client:
+            response_text = await asyncio.get_event_loop().run_in_executor(
+                None, _call_gemini, list(history)
+            )
         else:
             response_text = await asyncio.get_event_loop().run_in_executor(
                 None, _call_claude, list(history)
@@ -705,6 +742,20 @@ def _call_claude(messages: list[dict]) -> str:
         if block.type == "text":
             parts.append(block.text)
     return "\n".join(parts).strip()
+
+
+def _call_gemini(messages: list[dict]) -> str:
+    from google.genai import types as _gtypes
+    contents = []
+    for msg in messages:
+        role = "user" if msg["role"] == "user" else "model"
+        contents.append(_gtypes.Content(role=role, parts=[_gtypes.Part(text=msg["content"])]))
+    response = gemini_client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=contents,
+        config=_gtypes.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
+    )
+    return response.text.strip()
 
 
 def _call_gpt(messages: list[dict]) -> str:
@@ -760,6 +811,7 @@ def main() -> None:
     app.add_handler(CommandHandler("clear", clear_command))
     app.add_handler(CommandHandler("claude", claude_command))
     app.add_handler(CommandHandler("gpt", gpt_command))
+    app.add_handler(CommandHandler("gemini", gemini_command))
     app.add_handler(CommandHandler("remind", remind_command))
     app.add_handler(CommandHandler("reminders", reminders_command))
     app.add_handler(CommandHandler("login", login_command))
