@@ -680,7 +680,6 @@ def _call_claude(messages: list[dict]) -> str:
         max_tokens=4096,
         system=SYSTEM_PROMPT,
         messages=messages,
-        thinking={"type": "adaptive"},
     )
     parts: list[str] = []
     for block in response.content:
