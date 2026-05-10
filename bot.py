@@ -164,29 +164,26 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text("⛔ אין לך הרשאה להשתמש בבוט הזה.")
         return
 
-    userbot_status = "✅ מחובר" if (userbot and userbot.is_connected()) else "❌ לא מחובר — השתמש ב-/login"
+    userbot_status = "✅ מחובר" if (userbot and userbot.is_connected()) else "❌ לא מחובר — /login"
+    gpt_line = "• /gpt — GPT-4o (OpenAI)\n" if openai_client else ""
     await update.message.reply_text(
         "🤖 *עוזר AI — עזרה מורחבת*\n\n"
-        f"*בוט אישי (Userbot):* {userbot_status}\n\n"
+        f"*בוט אישי:* {userbot_status}\n\n"
         "*מודלים:*\n"
-        "• `/claude` — Claude Opus (Anthropic)\n"
-        "• `/gpt` — GPT-4o (OpenAI)\n\n"
+        "• /claude — Claude (Anthropic)\n"
+        f"{gpt_line}"
+        "\n"
         "*תזכורות:*\n"
-        "• `/remind 30m קנה חלב` — תזכורת בעוד 30 דקות\n"
-        "• `/remind 2h פגישה` — תזכורת בעוד שעתיים\n"
-        "• `/remind 1d חידוש מנוי` — תזכורת בעוד יום\n"
-        "• `/reminders` — תזכורות פעילות\n\n"
-        "*קבוצות דרך חשבון אישי (מומלץ):*\n"
-        "1\\. קבל API מ-my\\.telegram\\.org/apps\n"
-        "2\\. הגדר TELEGRAM\\_API\\_ID, TELEGRAM\\_API\\_HASH ב-\\.env\n"
-        "3\\. `/login` — אימות חד-פעמי\n"
-        "4\\. `/mygroups` — ראה את כל הקבוצות\n"
-        "5\\. `/send תזונה | ארוחת הצהריים: פסטה`\n\n"
-        "*קבוצות דרך הוספת הבוט (חלופה):*\n"
-        "1\\. הוסף את הבוט לקבוצה\n"
-        "2\\. `/addgroup תזונה` — רשום אותה\n"
-        "3\\. `/send תזונה | הודעה`",
-        parse_mode=constants.ParseMode.MARKDOWN_V2,
+        "• /remind 30m קנה חלב\n"
+        "• /remind 2h פגישה\n"
+        "• /remind 1d חידוש מנוי\n"
+        "• /reminders — תזכורות פעילות\n\n"
+        "*קבוצות:*\n"
+        "• /login — חבר חשבון טלגרם אישי\n"
+        "• /mygroups — כל הקבוצות שלך\n"
+        "• /send קבוצה | הודעה\n"
+        "• /addgroup שם — מתוך קבוצה",
+        parse_mode=constants.ParseMode.MARKDOWN,
     )
 
 
@@ -316,24 +313,24 @@ async def init_userbot() -> None:
     if not HAS_TELETHON or not TELEGRAM_API_ID or not TELEGRAM_API_HASH:
         return
 
-    async def _connect() -> None:
-        global userbot
+    if not os.path.exists("userbot.session"):
+        logger.info("No userbot session found. Use /login to authenticate.")
+        return
+
+    try:
         client = TelegramClient("userbot", TELEGRAM_API_ID, TELEGRAM_API_HASH)
-        await client.connect()
+        await asyncio.wait_for(client.connect(), timeout=8)
         if await client.is_user_authorized():
             userbot = client
             me = await client.get_me()
             logger.info("Userbot connected as %s", getattr(me, "first_name", "?"))
         else:
             await client.disconnect()
-            logger.info("Userbot not authenticated. Use /login to authenticate.")
-
-    try:
-        await asyncio.wait_for(_connect(), timeout=10)
+            logger.info("Userbot session exists but is not authorized. Use /login.")
     except asyncio.TimeoutError:
-        logger.warning("Userbot connection timed out — bot starting without userbot. Use /login later.")
+        logger.warning("Userbot connection timed out. Starting without userbot; use /login later.")
     except Exception as e:
-        logger.warning("Userbot init failed: %s — continuing without userbot.", e)
+        logger.warning("Userbot init failed: %s. Starting without userbot.", e)
 
 
 async def _send_otp(update: Update, user_id: int, phone: str) -> None:
