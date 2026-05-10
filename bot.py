@@ -40,8 +40,24 @@ if not HAS_TELETHON:
 # Configuration
 # ---------------------------------------------------------------------------
 
-TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+def _check_required_env(var_name: str) -> str:
+    value = os.environ.get(var_name)
+    if not value or not value.strip() or value.startswith("your_"):
+        print(f"\n❌ CONFIGURATION ERROR: {var_name} is not set or is a placeholder\n")
+        if var_name == "TELEGRAM_BOT_TOKEN":
+            print("   1. Go to https://t.me/botfather")
+            print("   2. Create a new bot with /newbot")
+            print("   3. Copy your bot token")
+            print("   4. Edit .env and set TELEGRAM_BOT_TOKEN=<your_token>\n")
+        elif var_name == "ANTHROPIC_API_KEY":
+            print("   1. Go to https://console.anthropic.com/")
+            print("   2. Create an API key")
+            print("   3. Edit .env and set ANTHROPIC_API_KEY=<your_key>\n")
+        raise ValueError(f"Required env var not set: {var_name}")
+    return value
+
+TELEGRAM_TOKEN = _check_required_env("TELEGRAM_BOT_TOKEN")
+ANTHROPIC_API_KEY = _check_required_env("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 TELEGRAM_API_ID = int(os.getenv("TELEGRAM_API_ID", "0"))
 TELEGRAM_API_HASH = os.getenv("TELEGRAM_API_HASH", "")
