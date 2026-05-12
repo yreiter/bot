@@ -659,25 +659,37 @@ async def openclaw_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
 
     try:
-        from src.main import execute_command
-    except ImportError:
-        try:
-            from claw_code_agent.main import execute_command
-        except ImportError:
-            await update.message.reply_text(
-                "❌ OpenClaw is not installed. Install with:\n"
-                "`pip install -r requirements.txt`",
-                parse_mode=constants.ParseMode.MARKDOWN,
+        import subprocess
+        claw_path = "/tmp/claw-code/rust/target/release/claw"
+
+        result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: subprocess.run(
+                [claw_path, "exec-command", task],
+                capture_output=True,
+                text=True,
+                timeout=60
             )
+        )
+
+        if result.returncode != 0:
+            error_msg = result.stderr or result.stdout or "Unknown error"
+            await update.message.reply_text(f"❌ OpenClaw error:\n{error_msg[:500]}")
+            logger.error("OpenClaw execution error: %s", error_msg)
             return
 
-    try:
-        result = await asyncio.get_event_loop().run_in_executor(
-            None, execute_command, task
-        )
-        response = str(result) if result else "✅ Task completed (no output)"
+        output = result.stdout.strip()
+        response = output if output else "✅ Task completed"
         for chunk in _split_message(response):
             await update.message.reply_text(chunk)
+    except FileNotFoundError:
+        await update.message.reply_text(
+            "❌ Claw Code CLI not found at `/tmp/claw-code/rust/target/release/claw`\n"
+            "See OPENCLAW_INSTALLATION.md for setup instructions",
+            parse_mode=constants.ParseMode.MARKDOWN,
+        )
+    except subprocess.TimeoutExpired:
+        await update.message.reply_text("❌ Task timed out (60 second limit)")
     except Exception as e:
         logger.error("OpenClaw execution error: %s", e)
         await update.message.reply_text(
