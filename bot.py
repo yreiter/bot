@@ -639,6 +639,51 @@ async def send_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error("Bot send failed for %s (chat_id=%s): %s", group_query, chat_id, e)
         await update.message.reply_text(f"❌ שגיאה בשליחה לקבוצה: {e}")
 
+
+async def openclaw_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = get_user_id(update)
+    if user_id is None or not is_authorized(user_id):
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "/openclaw <task>\n\n"
+            "דוגמאות:\n"
+            "• /openclaw list files in current directory\n"
+            "• /openclaw search for TODO in my code\n"
+            "• /openclaw create a text file with hello world"
+        )
+        return
+
+    task = " ".join(context.args)
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
+
+    try:
+        from src.main import execute_command
+    except ImportError:
+        try:
+            from claw_code_agent.main import execute_command
+        except ImportError:
+            await update.message.reply_text(
+                "❌ OpenClaw is not installed. Install with:\n"
+                "`pip install -r requirements.txt`",
+                parse_mode=constants.ParseMode.MARKDOWN,
+            )
+            return
+
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, execute_command, task
+        )
+        response = str(result) if result else "✅ Task completed (no output)"
+        for chunk in _split_message(response):
+            await update.message.reply_text(chunk)
+    except Exception as e:
+        logger.error("OpenClaw execution error: %s", e)
+        await update.message.reply_text(
+            f"❌ OpenClaw error: {str(e)[:200]}"
+        )
+
 # ---------------------------------------------------------------------------
 # Message handler
 # ---------------------------------------------------------------------------
@@ -765,6 +810,7 @@ def main() -> None:
     app.add_handler(CommandHandler("addgroup", addgroup_command))
     app.add_handler(CommandHandler("groups", groups_command))
     app.add_handler(CommandHandler("send", send_command))
+    app.add_handler(CommandHandler("openclaw", openclaw_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     logger.info("Bot is starting...")
