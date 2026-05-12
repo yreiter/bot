@@ -54,6 +54,19 @@ The bot will start and wait for messages. Send it a message from Telegram to tes
 /reminders  # See active reminders
 ```
 
+### OpenClaw AI Agent
+Execute autonomous AI tasks with OpenClaw:
+```
+/openclaw list files in current directory
+/openclaw search for TODO comments in my code
+/openclaw create a new file with sample content
+```
+The bot uses OpenClaw's AI agent to autonomously execute tasks. Results are sent back via Telegram.
+
+**Setup:**
+- Ensure `ANTHROPIC_API_KEY` is configured (same as Claude)
+- See [OPENCLAW_INSTALLATION.md](OPENCLAW_INSTALLATION.md) for detailed setup
+
 ### Group Management
 Two options:
 
@@ -71,14 +84,17 @@ Two options:
 
 ### Commands
 ```
-/start    - New conversation
-/clear    - Clear chat history
-/claude   - Switch to Claude
-/gpt      - Switch to ChatGPT
-/help     - Show all features
-/login    - Connect to personal account (userbot)
-/mygroups - List your groups (requires /login)
-/send     - Send message to group
+/start     - New conversation
+/clear     - Clear chat history
+/claude    - Switch to Claude
+/gpt       - Switch to ChatGPT
+/openclaw  - Execute autonomous AI task
+/help      - Show all features
+/login     - Connect to personal account (userbot)
+/mygroups  - List your groups (requires /login)
+/send      - Send message to group
+/remind    - Set a reminder
+/reminders - View active reminders
 ```
 
 ## Configuration (.env)
